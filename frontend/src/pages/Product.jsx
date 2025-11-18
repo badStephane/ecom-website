@@ -3,6 +3,37 @@ import { useParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import RelatedProducts from './../components/RelatedProducts';
 
+/**
+ * Validates if a URL is safe for use in img src attributes
+ * @param {string} url - URL to validate
+ * @returns {boolean} - Whether the URL is safe
+ */
+const isValidImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  
+  try {
+    const parsed = new URL(url, window.location.origin);
+    // Only allow http, https, and data URLs for images
+    return ['http:', 'https:', 'data:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Sanitizes an image URL to prevent XSS attacks
+ * @param {string} url - URL to sanitize
+ * @returns {string} - Sanitized URL or placeholder
+ */
+const sanitizeImageUrl = (url) => {
+  if (!isValidImageUrl(url)) {
+    console.warn(`Invalid or potentially dangerous image URL blocked: ${url}`);
+    // Return a placeholder image or empty string
+    return '/placeholder-image.png'; // Update with your actual placeholder path
+  }
+  return url;
+};
+
 const Product = () => {
   const { productId } = useParams();
 
@@ -22,7 +53,9 @@ const Product = () => {
           : Array.isArray(product.image) 
             ? product.image[0] 
             : product.image;
-        setImage(imageToUse);
+        
+        // Sanitize the image URL before setting it
+        setImage(sanitizeImageUrl(imageToUse));
       }
     };
     fetchProductData();
@@ -30,16 +63,18 @@ const Product = () => {
 
   const getProductImages = () => {
     if (!productData) return [];
+    
+    let rawImages = [];
     if (Array.isArray(productData.images) && productData.images.length > 0) {
-      return productData.images;
+      rawImages = productData.images;
+    } else if (Array.isArray(productData.image) && productData.image.length > 0) {
+      rawImages = productData.image;
+    } else if (typeof productData.image === 'string') {
+      rawImages = [productData.image];
     }
-    if (Array.isArray(productData.image) && productData.image.length > 0) {
-      return productData.image;
-    }
-    if (typeof productData.image === 'string') {
-      return [productData.image];
-    }
-    return [];
+    
+    // Sanitize all image URLs
+    return rawImages.map(sanitizeImageUrl).filter(url => url !== '/placeholder-image.png');
   };
 
   if (!productData) {
@@ -62,13 +97,23 @@ const Product = () => {
                 src={item}
                 key={index}
                 className="w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer"
-                alt="product_image"
+                alt={`Product thumbnail ${index + 1}`}
+                onError={(e) => {
+                  e.target.src = '/placeholder-image.png';
+                }}
               />
             ))}
           </div>
 
           <div className="w-4 sm:w-[80%]">
-            <img src={image} className="w-full h-auto" alt="product_img" />
+            <img 
+              src={image} 
+              className="w-full h-auto" 
+              alt="Product main image"
+              onError={(e) => {
+                e.target.src = '/placeholder-image.png';
+              }}
+            />
           </div>
         </div>
 
@@ -106,7 +151,7 @@ const Product = () => {
 
           {productData.stock > 0 ? (
             <button 
-              onClick={()=>addToCart(productData._id,size)} 
+              onClick={() => addToCart(productData._id, size)} 
               className="bg-black text-white px-8 py-3 text-sm active:bg-gray-700"
               disabled={!size}
             >
