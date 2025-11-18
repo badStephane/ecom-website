@@ -9,6 +9,36 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Define allowed upload directory (customize based on your needs)
+const ALLOWED_UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
+
+/**
+ * Validate file path to prevent path traversal attacks
+ * @param {string} filePath - Path to validate
+ * @returns {boolean} - Whether the path is safe
+ */
+const isValidFilePath = (filePath) => {
+  // Resolve the absolute path
+  const resolvedPath = path.resolve(filePath);
+  
+  // Check if the resolved path is within the allowed directory
+  return resolvedPath.startsWith(ALLOWED_UPLOAD_DIR);
+};
+
+/**
+ * Check if path is a URL
+ * @param {string} filePath - Path to check
+ * @returns {boolean} - Whether the path is a URL
+ */
+const isUrl = (filePath) => {
+  try {
+    const url = new URL(filePath);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Upload image to Cloudinary from URL or file path
  * @param {string} filePath - Path to the file or URL
@@ -28,8 +58,15 @@ export const uploadImage = async (filePath, folder = "livewear") => {
       fetch_format: "auto",
     });
 
-    // If file was uploaded from local storage, delete it
-    if (fs.existsSync(filePath)) {
+    // Only delete local files if they're not URLs and within allowed directory
+    const isUrlPath = isUrl(filePath);
+    if (!isUrlPath && fs.existsSync(filePath)) {
+      // Validate path before deletion
+      if (!isValidFilePath(filePath)) {
+        console.warn(`Attempt to delete file outside allowed directory: ${filePath}`);
+        throw new Error("Invalid file path");
+      }
+      
       fs.unlinkSync(filePath);
     }
 
