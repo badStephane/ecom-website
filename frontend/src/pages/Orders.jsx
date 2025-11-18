@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { useCallback } from "react";
 import axios from "axios";
+import { sanitizeImageUrl } from "../utils/security";
 
 const Orders = () => {
 
@@ -64,10 +65,17 @@ const Orders = () => {
      
      <div>
       {
-        orderData.map((item,index) =>(
-          <div key={index} className="py-4 border-b text-gray-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start gap-6 text-sm">
-                <img className="w-16 sm:w-20" src={item.image[0]} alt="item_image" />
+          orderData.map((item, index) => (
+            <div key={index} className="py-4 border-b text-gray-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-start gap-6 text-sm">
+                <img 
+                  className="w-16 sm:w-20" 
+                  src={sanitizeImageUrl(item.image[0])} 
+                  alt="item_image"
+                  onError={(e) => {
+                    e.target.src = '/images/placeholder.jpg';
+                  }}
+                />
 
                 <div>
                     <p className="sm:text-base font-medium">{item.name}</p>

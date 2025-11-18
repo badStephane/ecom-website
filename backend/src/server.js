@@ -43,6 +43,13 @@ app.use(xssProtection); // Protection contre les attaques XSS
 app.use(nosqlInjectionProtection); // Protection contre les injections NoSQL
 app.use(httpParameterProtection); // Protection contre la pollution des paramètres HTTP
 app.use(rateLimiter); // Limitation du taux de requêtes
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; img-src 'self' https://res.cloudinary.com data:; script-src 'self' 'unsafe-inline'"
+  );
+  next();
+});
 
 // Health check route
 app.get("/api/health", (req, res) => {

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
+import { sanitizeImageUrl } from '../../utils/security';
 
 const OrderDetails = () => {
   const { orderId } = useParams();
@@ -165,11 +166,15 @@ const OrderDetails = () => {
                 <div key={index} className="flex gap-4 pb-4 border-b last:border-b-0">
                   {item.product?.image && (
                     <img
-                      src={item.product.image}
-                      alt={item.product?.name}
+                      src={sanitizeImageUrl(item.product.image)}
+                      alt={item.product?.name || 'Product image'}
                       className="w-20 h-20 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.src = '/images/placeholder.jpg';
+                      }}
                     />
                   )}
+
                   <div className="flex-1">
                     <h3 className="font-semibold">{item.product?.name || 'Produit'}</h3>
                     <p className="text-gray-500 text-sm">Taille : {item.size}</p>

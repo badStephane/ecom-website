@@ -2,41 +2,10 @@ import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import RelatedProducts from './../components/RelatedProducts';
-
-/**
- * Validates if a URL is safe for use in img src attributes
- * @param {string} url - URL to validate
- * @returns {boolean} - Whether the URL is safe
- */
-const isValidImageUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  
-  try {
-    const parsed = new URL(url, window.location.origin);
-    // Only allow http, https, and data URLs for images
-    return ['http:', 'https:', 'data:'].includes(parsed.protocol);
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Sanitizes an image URL to prevent XSS attacks
- * @param {string} url - URL to sanitize
- * @returns {string} - Sanitized URL or placeholder
- */
-const sanitizeImageUrl = (url) => {
-  if (!isValidImageUrl(url)) {
-    console.warn(`Invalid or potentially dangerous image URL blocked: ${url}`);
-    // Return a placeholder image or empty string
-    return '/placeholder-image.png'; // Update with your actual placeholder path
-  }
-  return url;
-};
+import { sanitizeImageUrl } from '../utils/security';
 
 const Product = () => {
   const { productId } = useParams();
-
   const { products, currency, addToCart } = useContext(ShopContext);
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState("");
@@ -47,14 +16,12 @@ const Product = () => {
       const product = products.find((item) => item._id === productId);
       if (product) {
         setProductData(product);
-        // Handle both image (string) and images (array)
         const imageToUse = Array.isArray(product.images) 
           ? product.images[0] 
           : Array.isArray(product.image) 
             ? product.image[0] 
             : product.image;
         
-        // Sanitize the image URL before setting it
         setImage(sanitizeImageUrl(imageToUse));
       }
     };
@@ -73,8 +40,11 @@ const Product = () => {
       rawImages = [productData.image];
     }
     
-    // Sanitize all image URLs
-    return rawImages.map(sanitizeImageUrl).filter(url => url !== '/placeholder-image.png');
+    return rawImages.map(sanitizeImageUrl);
+  };
+
+  const handleImageError = (e) => {
+    e.target.src = '/images/placeholder.jpg';
   };
 
   if (!productData) {
@@ -88,36 +58,32 @@ const Product = () => {
   return (
     <div className="border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100">
       <div className="flex gap-12 sm:gap-12 flex-col sm:flex-row">
-        {/*---------- product images ----------*/}
+        {/* Product images */}
         <div className="flex-1 flex flex-col-reverse gap-3 sm:flex-row">
           <div className="flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full">
             {getProductImages().map((item, index) => (
               <img
-                onClick={() => setImage(item)}
-                src={item}
+                onClick={() => setImage(sanitizeImageUrl(item))}
+                src={sanitizeImageUrl(item)}
                 key={index}
                 className="w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer"
                 alt={`Product thumbnail ${index + 1}`}
-                onError={(e) => {
-                  e.target.src = '/placeholder-image.png';
-                }}
+                onError={handleImageError}
               />
             ))}
           </div>
 
           <div className="w-4 sm:w-[80%]">
             <img 
-              src={image} 
+              src={sanitizeImageUrl(image)} 
               className="w-full h-auto" 
               alt="Product main image"
-              onError={(e) => {
-                e.target.src = '/placeholder-image.png';
-              }}
+              onError={handleImageError}
             />
           </div>
         </div>
 
-        {/*---------- product info ----------*/}
+        {/* Product info */}
         <div className="flex-1">
           <h1 className="font-medium text-2xl">{productData.name}</h1>
 

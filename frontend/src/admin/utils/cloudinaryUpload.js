@@ -68,7 +68,7 @@ export const uploadImageFromUrl = async (imageUrl, token) => {
 
     // Validate URL format
     try {
-      new URL(imageUrl);
+      validateImageUrl(imageUrl);
     } catch {
       throw new Error('Invalid URL format');
     }
@@ -144,3 +144,18 @@ export const deleteImageFromCloudinary = async (publicId, token) => {
   }
 };
 
+// Dans votre contrôleur de produits
+const validateImageUrl = (url) => {
+  const allowedDomains = [
+    'res.cloudinary.com',
+    'yourdomain.com',
+    'localhost' // pour le développement
+  ];
+  
+  try {
+    const parsed = new URL(url);
+    return allowedDomains.some(domain => parsed.hostname.includes(domain));
+  } catch {
+    return false; // URL invalide
+  }
+};

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createProduct, updateProduct } from '../../store/adminProductSlice';
 import { categoriesAPI } from '../../services/api';
 import { uploadImageFromUrl } from '../../utils/cloudinaryUpload';
+import { sanitizeImageUrl } from '../../utils/security';
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -329,9 +330,12 @@ const ProductForm = () => {
                   <div key={index} className="relative group">
                     <div className="relative overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 h-32 w-32">
                       <img
-                        src={imageUrl}
+                        src={sanitizeImageUrl(imageUrl)}
                         alt={`Product ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/images/placeholder.jpg';
+                        }}
                       />
                       
                       {/* Main Image Badge */}
