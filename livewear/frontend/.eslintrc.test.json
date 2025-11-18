@@ -1,0 +1,15 @@
+{
+  "env": {
+    "jest": true,
+    "browser": true,
+    "node": true
+  },
+  "globals": {
+    "jest": true,
+    "global": true
+  },
+  "rules": {
+    "react/prop-types": "off",
+    "react/display-name": "off"
+  }
+}

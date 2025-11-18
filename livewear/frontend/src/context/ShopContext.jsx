@@ -1,0 +1,193 @@
+import { createContext, useEffect, useState, useCallback } from "react";
+import PropTypes from "prop-types";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+export const ShopContext = createContext();
+
+const ShopContextProvider = (props) => {
+  // Fixed currency: XOF only
+  const currency = "XOF ";
+
+  // backendUrl is imported from the admin app
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  // for searching state
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+
+  // for products state
+  const [cartItems, setCartItems] = useState({});
+
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [token, setToken] = useState("");
+
+  const navigate = useNavigate();
+
+  const addToCart = (itemId, size) => {
+    if (!size) {
+      toast.error("Please select a size");
+      return;
+    }
+
+    let cartData = structuredClone(cartItems);
+    // check if the item already exists in the cart
+    // if it does, increment the quantity
+    if (cartData[itemId]) {
+      if (cartData[itemId][size]) {
+        cartData[itemId][size] += 1;
+      } else {
+        cartData[itemId][size] = 1;
+      }
+    } else {
+      cartData[itemId] = {};
+      cartData[itemId][size] = 1;
+    }
+    setCartItems(cartData);
+    toast.success("Added to cart!");
+  };
+
+  // add to card counter
+  const getCartCount = () => {
+    let totalCount = 0;
+    for (const items in cartItems) {
+      for (const item in cartItems[items]) {
+        try {
+          if (cartItems[items][item] > 0) {
+            totalCount += cartItems[items][item];
+          }
+        } catch (error) {
+          console.error("Error calculating cart count:", error);
+        }
+      }
+    }
+    return totalCount;
+  };
+
+
+
+
+  // update quantity of the cart item
+  const updateQuantity = (itemId, size, quantity) => {
+    let cartData = structuredClone(cartItems);
+
+    cartData[itemId][size] = quantity;
+
+    setCartItems(cartData);
+  };
+
+  
+
+
+
+
+
+const getCartAmount = () => {
+  let totalAmount = 0;
+  for (const itemId in cartItems) {
+    const itemInfo = products.find((product) => product._id === itemId);
+    if (!itemInfo) continue; // ⚠️ যদি itemInfo না পাওয়া যায়, তাহলে skip
+    for (const size in cartItems[itemId]) {
+      try {
+        const quantity = cartItems[itemId][size];
+        if (quantity > 0) {
+          totalAmount += itemInfo.price * quantity;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }
+  return totalAmount;
+};
+
+
+
+
+
+
+
+
+
+  // Fetch products data from the backend
+  const getProductsData = useCallback(async () => {
+    try {
+      const response = await axios.get(backendUrl + "/api/products");
+
+      if (response.data.success) {
+        setProducts(response.data.products);
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  }, [backendUrl]);
+
+  // Fetch categories data from the backend
+  const getCategoriesData = useCallback(async () => {
+    try {
+      const response = await axios.get(backendUrl + "/api/categories");
+
+      if (response.data.success || Array.isArray(response.data)) {
+        const cats = response.data.success ? response.data.categories : response.data;
+        setCategories(cats);
+      } else {
+        console.log("No categories found");
+      }
+    } catch (error) {
+      console.log("Error fetching categories:", error);
+    }
+  }, [backendUrl]);
+
+
+
+
+
+
+  
+  useEffect(() => {
+    getProductsData();
+    getCategoriesData();
+  }, [getProductsData, getCategoriesData]);
+
+  useEffect(() => {
+    if (!token && localStorage.getItem("token")) {
+      setToken(localStorage.getItem("token"));
+    }
+  }, [token]);
+
+  const value = {
+    products,
+    categories,
+    currency,
+    search,
+    setSearch,
+    showSearch,
+    setShowSearch,
+    cartItems,
+    addToCart,
+    setCartItems,
+    getCartCount,
+    updateQuantity,
+    getCartAmount,
+    navigate,
+    backendUrl,
+    setToken,
+    token,
+  };
+
+  
+  ShopContextProvider.propTypes = {
+    children: PropTypes.node.isRequired, // Validates that 'children' is a React node and required
+  };
+
+  return (
+    <ShopContext.Provider value={value}>{props.children}</ShopContext.Provider>
+  );
+};
+
+export default ShopContextProvider;
