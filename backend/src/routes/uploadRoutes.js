@@ -26,7 +26,8 @@ router.post("/single", authMiddleware, uploadSingle, async (req, res) => {
       });
     }
 
-    const result = await uploadImage(req.file.path);
+    // Pass true for isLocalFile since this is uploaded via multer
+    const result = await uploadImage(req.file.path, "livewear", true);
 
     if (!result.success) {
       return res.status(400).json({
@@ -71,7 +72,8 @@ router.post("/multiple", authMiddleware, uploadMultiple, async (req, res) => {
     }
 
     const filePaths = req.files.map((file) => file.path);
-    const results = await uploadMultipleImages(filePaths);
+    // Pass true for isLocalFile since these are uploaded via multer
+    const results = await uploadMultipleImages(filePaths, "livewear", true);
 
     const failedUploads = results.filter((r) => !r.success);
     if (failedUploads.length > 0) {
@@ -120,7 +122,15 @@ router.post("/from-url", authMiddleware, async (req, res) => {
 
     // Validate URL format
     try {
-      new URL(url);
+      const parsedUrl = new URL(url);
+      
+      // Additional security: only allow http/https protocols
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        return res.status(400).json({
+          success: false,
+          message: "Only HTTP and HTTPS URLs are allowed",
+        });
+      }
     } catch {
       return res.status(400).json({
         success: false,
@@ -128,7 +138,8 @@ router.post("/from-url", authMiddleware, async (req, res) => {
       });
     }
 
-    const result = await uploadImage(url);
+    // Pass false for isLocalFile since this is a URL
+    const result = await uploadImage(url, "livewear", false);
 
     if (!result.success) {
       return res.status(400).json({
@@ -171,6 +182,16 @@ router.post("/delete", authMiddleware, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Public ID is required",
+      });
+    }
+
+    // Validate publicId format to prevent injection attacks
+    // Cloudinary public IDs should only contain alphanumeric, hyphens, underscores, and slashes
+    const validPublicIdPattern = /^[a-zA-Z0-9\/_-]+$/;
+    if (!validPublicIdPattern.test(publicId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid public ID format",
       });
     }
 
